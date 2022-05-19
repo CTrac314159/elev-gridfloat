@@ -12,9 +12,10 @@ an option when downloading the data. Regardless, the module is provided below.
 
 Routine Listing
 -------
-read_ned_gridfloat : Read in the GridFloat files
-read_header : Read in the header file associated with GridFloat files
-read_flt : Read in the *.flt file that contains the elevation data
+ElevGridfloat Class:
+    read_ned_gridfloat : Read in the GridFloat files
+    read_header : Read in the header file associated with GridFloat files
+    read_flt : Read in the *.flt file that contains the elevation data
 plot_elevation : Create a contour plot of the elevation data
 
 Notes
@@ -28,130 +29,122 @@ GridFloat format specification is here: <https://www.loc.gov/preservation/digita
 from types import SimpleNamespace
 import numpy as np
 
-def read_ned_gridfloat(file):
-    """
-    This function will read in the float and header file. 
-    It will also return the lats, lons, and elevation data from
-    the function.
+class ElevGridfloat:
     
-    Given a filename with the appropriate path, a namespace of latitudes, longitudes, 
-    and elevation data is created. The data is regularly gridded. Bad values are given NaN
-    assignments. It then packs up the lats, lons, and elevation data and returns them 
-    from the function. Note: the float and header file are assumed to be in the same 
-    directory. The header file must also have a lower-left (ll) corner.
-    
-    Parameters
-    ----------
-    file: The file which will be read in. Both float
-    and header extensions are defined from the file.
+    def __init__(self, elev_file):
+        self.elev_file = elev_file
+
+    def read_ned_gridfloat(self):
+        """
+        This function will read in the float and header file. 
+        It will also return the lats, lons, and elevation data from
+        the function.
         
-    Returns
-    ----------
-    SimpleNamespace (has several keys, some of which are optionally included):
-        lats: A latitude array of nrows in the header file starting in the lower left corner
-        lons: A longitude array of ncolumns in the header file starting in the lower left corner
-        elevation: Flipped elevation data from the float file
-    
-    Example Usage
-    -----------
-    >>> file = 'path/to/file'
-    >>> data = read_ned_gridfloat(file)
-    """
-    import os.path
-    
-    #Extract the file name and extension separately. Define header and float file paths.
-    basename, ext = os.path.splitext(file)
-    hdr_file = basename + '.hdr'
-    flt_file = basename + '.flt'
-    
-    #Read in the header and float files.
-    hdr = read_header(hdr_file)
-    data = read_flt(flt_file)
-    
-    #Change any bad values in the data to NaNs.
-    data[np.isclose(data, hdr['NODATA_value'])] = np.nan
-    
-    #Make the shape of the data a 2D array. Flip/invert the data rows.
-    data.shape = (int(hdr['nrows']), int(hdr['ncols']))
-    data = np.flip(data, axis=0)
-    
-    #Find the lat/lon ranges the data corresponds to. This
-    #can be derived from some of the header attributes.
-    lons = np.arange(hdr['ncols']) * hdr['cellsize'] + hdr['xllcorner']
-    lats = np.arange(hdr['nrows']) * hdr['cellsize'] + hdr['yllcorner']
-    
-    #Pack everything up.
-    return SimpleNamespace(lats = lats, lons = lons, elevation = data)
-
-def read_header(file):
-    """
-    This function reads in the header file specifically.
-    A dictionary with the header data is returned. First, the file
-    is opened and lines are split. All of the bytes are cast as numbers.
-    Then, the header values are inserted into the dictionary.
-    
-    Parameters
-    ------------
-    file: The header file to be read in.
-    
-    Returns
-    ------------
-    hdr: A dictionary with all of the desired header values.
-    
-    Example Usage
-    ------------
-    >>> file = '/path/to/file'
-    >>> data = read_header(file)
-    """
-    
-    #Use a dictionary to hold the header information.
-    hdr = dict()
-    
-    #Open the file, iterating row-by-row.
-    with open(file, 'r') as f:
-        for line in f:
-            entity = line.split()
-            print(entity)
+        Given a filename with the appropriate path, a namespace of latitudes, longitudes, 
+        and elevation data is created. The data is regularly gridded. Bad values are given NaN
+        assignments. It then packs up the lats, lons, and elevation data and returns them 
+        from the function. Note: the float and header file are assumed to be in the same 
+        directory. The header file must also have a lower-left (ll) corner.
             
-            #Most of the values are numbers, so cast them.
-            #Otherwise, keep it as a string.
-            if 'byteorder' in entity[0]:
-                val = entity[1]
-            else:
-                val = float(entity[1])
-            
-            hdr[entity[0]] = val
+        Returns
+        ----------
+        SimpleNamespace (has several keys, some of which are optionally included):
+            lats: A latitude array of nrows in the header file starting in the lower left corner
+            lons: A longitude array of ncolumns in the header file starting in the lower left corner
+            elevation: Flipped elevation data from the float file
         
-    return hdr
-
-def read_flt(file):
-    """
-    This function will read in the float file specifically.
+        Example Usage
+        -----------
+        >>> file = 'path/to/file'
+        >>> data = read_ned_gridfloat(file)
+        """
+        import os.path
+        
+        #Extract the file name and extension separately. Define header and float file paths.
+        basename, ext = os.path.splitext(self.elev_file)
+        self.hdr_file = basename + '.hdr'
+        self.flt_file = basename + '.flt'
+        
+        #Read in the header and float files.
+        hdr = self.read_header(self.hdr_file)
+        self.data = self.read_flt(self.flt_file)
+        
+        #Change any bad values in the data to NaNs.
+        self.data[np.isclose(self.data, hdr['NODATA_value'])] = np.nan
+        
+        #Make the shape of the data a 2D array. Flip/invert the data rows.
+        self.data.shape = (int(hdr['nrows']), int(hdr['ncols']))
+        self.data = np.flip(self.data, axis=0)
+        
+        #Find the lat/lon ranges the data corresponds to. This
+        #can be derived from some of the header attributes.
+        self.lons = np.arange(hdr['ncols']) * hdr['cellsize'] + hdr['xllcorner']
+        self.lats = np.arange(hdr['nrows']) * hdr['cellsize'] + hdr['yllcorner']
+        
+        #Pack everything up.
+        return SimpleNamespace(lats = self.lats, lons = self.lons, elevation = self.data)
     
-    An array with the float data is returned. First, the file
-    is opened and read in binary. All of the bytes are cast as numbers, as
-    seen in the with open statement for the float file.
+    def read_header(self):
+        """
+        This function reads in the header file specifically.
+        A dictionary with the header data is returned. First, the file
+        is opened and lines are split. All of the bytes are cast as numbers.
+        Then, the header values are inserted into the dictionary.
+        
+        Returns
+        ------------
+        hdr: A dictionary with all of the desired header values.
+        
+        Example Usage
+        ------------
+        >>> file = '/path/to/file'
+        >>> data = read_header(file)
+        """
+        
+        #Use a dictionary to hold the header information.
+        hdr = dict()
+        
+        #Open the file, iterating row-by-row.
+        with open(self.elev_file, 'r') as f:
+            for line in f:
+                entity = line.split()
+                print(entity)
+                
+                #Most of the values are numbers, so cast them.
+                #Otherwise, keep it as a string.
+                if 'byteorder' in entity[0]:
+                    val = entity[1]
+                else:
+                    val = float(entity[1])
+                
+                hdr[entity[0]] = val
+            
+        return hdr
     
-    Parameters
-    ----------
-    file: The float file to be read in.
+    def read_flt(self):
+        """
+        This function will read in the float file specifically.
+        
+        An array with the float data is returned. First, the file
+        is opened and read in binary. All of the bytes are cast as numbers, as
+        seen in the with open statement for the float file.
+        
+        Returns
+        ----------
+        data: An array with all of the desired float data.
+        
+        Example Usage
+        ----------
+        >>> file = '/path/to/file'
+        >>> data = read_flt(file)
+        """
+        
+        #Read in the float file, making the data 32-bit floats.
+        with open(self.elev_file, 'rb') as f:
+            self.data = np.fromfile(f, dtype = np.float32)
+        
+        return self.data
     
-    Returns
-    ----------
-    data: An array with all of the desired float data.
-    
-    Example Usage
-    ----------
-    >>> file = '/path/to/file'
-    >>> data = read_flt(file)
-    """
-    
-    #Read in the float file, making the data 32-bit floats.
-    with open(file, 'rb') as f:
-        data = np.fromfile(f, dtype = np.float32)
-    
-    return data
-
 def plot_elevation(lons, lats, elevation, cmap='Reds_r', levels = None,
                    inset_bounds = None):
     """
@@ -315,6 +308,8 @@ def plot_elevation(lons, lats, elevation, cmap='Reds_r', levels = None,
     
 #     f = 'C:/Users/chris/OneDrive/Desktop/aes509/n34w112/floatn34w112_1.flt'
     
-#     data = read_ned_gridfloat(f)
+#     elev = ElevGridfloat(f)
+
+#     elev.read_ned_gridfloat()
     
-#     elv_plot = plot_elevation(data.lons, data.lats, data.elevation, inset_bounds=[-111.9, -111.4, 33.7, 33.9])
+#     elv_plot = plot_elevation(elev.lons, elev.lats, elev.data, inset_bounds=[-111.9, -111.4, 33.7, 33.9])
